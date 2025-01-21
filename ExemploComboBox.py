@@ -63,8 +63,9 @@ class FiestraPrincipal (Gtk.Window):
         # Preparamos a celda:
         celdaGraficos = Gtk.CellRendererPixbuf()
         cmbIconas.pack_start(celdaGraficos, True)
-        cmbPaises.add_attribute(celdaGraficos, "icon_name", 1)
+        cmbPaises.add_attribute (celdaGraficos, "icon_name", 1)
         caixaV.pack_start(cmbIconas, False, False, 0)
+        # no muestra los iconos por que no quiere
 
 
 
