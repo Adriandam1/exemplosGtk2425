@@ -4,6 +4,10 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 import sqlite3 as dbapi
 
+# https://lazka.github.io/pgi-docs/Gtk-3.0/classes/RadioButton.html
+# https://lazka.github.io/pgi-docs/Gtk-3.0/classes/ListStore.html
+
+# ESTO ESUNA CONTINUACION DE TREEVIEWFILTRADOORDEADO pero usamos modelo_filtrado para filtrar campos
 class FiestraPrincipal (Gtk.Window):
     def __init__(self):
         super().__init__()
@@ -16,8 +20,16 @@ class FiestraPrincipal (Gtk.Window):
         # definicion do modelo
         modelo = Gtk.ListStore (str, str, int, str, bool)
 
+        #indicamos a columna que vai a ser ordenada
+        modelo.set_sort_func(2, self.compara_modelo, None)
         # saco un modelo distinto a partir to modelo orixinal y creo esta diferencia
-        #modelo_filtrado = modelo.filter_new() # traballo con un modelo filtrado(me obriga a cambiar o modelo da vista o fago en filtradoOrdeado2.py)
+        # creo modelo filtrado, que é parte de modelo
+        modelo_filtrado = modelo.filter_new() # traballo con un modelo filtrado(me obriga a cambiar o modelo da vista o fago en filtradoOrdeado2.py)
+        modelo_filtrado.set_visible_func(self.filtro_usuarios_xenero)
+
+
+
+
 
         try:
             bbdd = dbapi.connect("baseDatos2.dat")
@@ -26,12 +38,12 @@ class FiestraPrincipal (Gtk.Window):
             for rexistro in cursor:
                 modelo.append (rexistro)
         except dbapi.DatabaseError as e:
-            print ("Erro o cargar o ListStore "+ e)
+            print ("Erro o cargar o ListStore "+ str(e))
         finally:
             cursor.close()
             bbdd.close()
 
-        trvDatosUsuarios = Gtk.TreeView (model = modelo)
+        trvDatosUsuarios = Gtk.TreeView (model = modelo_filtrado) # HEMOS CAMBIADO EL MODELO EN ESTA VERSION
         seleccion = trvDatosUsuarios.get_selection()
 
         # columnas dni e nome
@@ -44,13 +56,14 @@ class FiestraPrincipal (Gtk.Window):
         # celda de progreso complecion CellRendererProgress
         celda = Gtk.CellRendererProgress() # barra de progreso
         columna = Gtk.TreeViewColumn("Edade", celda, value = 2)
+        columna.set_sort_column_id(2) # co modelo identificamos coa columna 2 permitirianos ordear os filas
         trvDatosUsuarios.append_column(columna)
 
         # En la tabla abra una columna llamada genero que sera editable y tendra un combo con 3 posiblidades
         modeloCombo = Gtk.ListStore(str)
-        modeloCombo.append("Muller",) # importante poner una coma al final para que se entienda que es una tupla
-        modeloCombo.append("Home",)
-        modeloCombo.append("Outros",)
+        modeloCombo.append(("Muller",)) # importante poner una coma al final para que se entienda que es una tupla
+        modeloCombo.append(("Home",))
+        modeloCombo.append(("Outros",))
         celda = Gtk.CellRendererCombo()
         celda.set_property("editable", True)
         celda.props.model = modeloCombo
@@ -65,24 +78,23 @@ class FiestraPrincipal (Gtk.Window):
         columna = Gtk.TreeViewColumn("Falecido", celda, activate=4)
         trvDatosUsuarios.append_column(columna)
 
-        """Esto seria para el modelo filtrado
         # creamos unha caixa horizontal
         caixaH = Gtk.Box (orientation=Gtk.Orientation.HORIZONTAL, spacing= 4)
             # creamos os botones
         rbtHome = Gtk.RadioButton(label= "Home")
-        rbtMuller = Gtk.RadioButton(label= "Muller")
-        rbtOutros = Gtk.RadioButton(label= "Outros")
+            # Como queremos que los radiobutton tengan relacion y solo poder tener uno marcado, hacemos que los siguientes esten en el mismo "widget" que rbthome
+        rbtMuller = Gtk.RadioButton.new_with_label_from_widget(rbtHome, label= "Muller")
+        rbtOutros = Gtk.RadioButton.new_with_label_from_widget(rbtHome, label= "Outros")
             # engadimos os botones a caixa
         caixaH.pack_start(rbtHome, False, False, 2)
         caixaH.pack_start(rbtMuller, False, False, 2)
         caixaH.pack_start(rbtOutros, False, False, 2)
             # Para que reaccione cuando os manipulemos tratamos o sinal toggled
-        #rbtHome.connect ("toggled", self.on_xenero_toggled, "Home", modelo___)
-        #rbtMuller.connect ("toggled", self.on_xenero_toggled, "Muller", modelo___)
-        #rbtOutros.connect ("toggled", self.on_xenero_toggled, "Outros", modelo___)
+        rbtHome.connect ("toggled", self.on_xenero_toggled, "Home", modelo_filtrado)
+        rbtMuller.connect ("toggled", self.on_xenero_toggled, "Muller", modelo_filtrado)
+        rbtOutros.connect ("toggled", self.on_xenero_toggled, "Outros", modelo_filtrado)
         #Metemos esta caixa horizontal dentro da caixa vertical
-        #caixaV.pack_start(caixaH, True, True, 6)
-        """
+        caixaV.pack_start(caixaH, True, True, 6)
 
 
 
@@ -130,8 +142,31 @@ class FiestraPrincipal (Gtk.Window):
             cursor.close()
             bbdd.close()
 
+    # estos 2 metodos siguientes nos permiten filtras a los usuarios por su xenero de modo que cuando se elige una opcion solo salen los usuarios de dicho genero
+    def on_xenero_toggled(self, radioButton, xenero, modelo):
+        if radioButton.get_active(): # si el radiobutton esta activado
+            self.filtradoXenero = xenero # se recoge el valor y se le aplica
+            #otra manera de hacerlo seria:
+            #self.filtradoXenero = radioButton.props.label
+            modelo.refilter() # revisar refilter
 
+    def filtro_usuarios_xenero(self, modelo, fila, datos):
+        # a temos preparada por si e un string o e tipo none
+        if self.filtradoXenero is None or self.filtradoXenero == "None":
+            return True
+        else:
+            return modelo[fila][3] == self.filtradoXenero
 
+    def compara_modelo(self, modelo, fila1, fila2, datoUsuario):
+        columna_ordear, _ = modelo.get_sort_column_id() # con esto temos a referencia da columna (3), ponemos la coma barrabaja por que el column id da una tupla, pero solo necesitamos un dato
+        edade1 = modelo.get_value(fila1, columna_ordear) # sacamos o edade1 que seria a fila1
+        edade2 = modelo.get_value(fila2, columna_ordear) # sacamos o seguinte valor
+        if edade1 < edade2:
+            return -1 # retornamos valor negativo
+        elif edade1 == edade2:
+            return 0 # retornamos 2
+        elif edade1 > edade2:
+            return 1 # retornamos valor positivo
 
 
 

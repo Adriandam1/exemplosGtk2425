@@ -2,7 +2,7 @@ from conexionBD import ConexionBD
 
 """
 Esta clase utiliza conexionDB para crear bases de datos, tablas y posibilita inxerir datos nelas,
-HAY QUE CAMBIARLA PARA CADA PROGRAMA LOGICAMENTE
+HAY QUE CAMBIARLA PARA CADA PROGRAMA LOGICAMENTE AHORA ESTA PUESTA PARA ExemploTreeView.py
 """
 class CreaTaboaBD:
     def __init__(self):
