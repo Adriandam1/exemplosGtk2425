@@ -51,14 +51,11 @@ class FiestraPrincipal (Gtk.Window):
 
         for i in range (len(columnas)): # le danos a lonxitude da lista columnas e por cada elemento da lista repetimos has seguintes operaciones
             celda = Gtk.CellRendererText() # a celda vai a ir sempre asignada a unha columna, polo que temos que crear a columna
-            columna = Gtk.TreeViewColumn(columnas[i], celda, text = i) # columna, celda, indice do modelo
+            columna = Gtk.TreeViewColumn(columnas[i], celda, text = i) # columna, celda, indice do modelo que vamos a representar
             vista.append_column(columna)
 
         # para rematar o que facemos e engadir a packstart
-        caixaV.pack_start(vista, False, False, 0)
-
-
-
+        caixaV.pack_start(vista, False, False, 0)  # False, False, 0 -> non se expande, non se expande, 0 de separacion
 
         self.add(caixaV)
         self.connect(("delete-event"), Gtk.main_quit)
